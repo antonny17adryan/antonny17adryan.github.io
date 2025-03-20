@@ -1,0 +1,341 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>EconomicFire</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            touch-action: manipulation;
+        }
+
+        body {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            background: #000;
+            color: white;
+            font-family: 'Arial', sans-serif;
+            margin: 0;
+            padding: 1rem;
+            min-height: 100vh;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 400px;
+        }
+
+        h1 {
+            font-size: 1.8rem;
+            margin: 1rem 0;
+            text-align: center;
+        }
+
+        .chama-container {
+            position: relative;
+            height: 40vh;
+            max-height: 300px;
+            margin: 1rem 0;
+        }
+
+        .chama {
+            position: absolute;
+            bottom: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 15vw;
+            min-width: 60px;
+            max-width: 100px;
+            filter: blur(4px);
+            animation: flame 0.3s infinite alternate;
+        }
+
+        .chama::before,
+        .chama::after {
+            content: '';
+            position: absolute;
+            border-radius: 50% 50% 0 0;
+            width: 100%;
+        }
+
+        .chama::before {
+            height: 100%;
+            background: linear-gradient(to top, 
+                rgba(255,255,255,0) 40%,
+                currentColor 90%);
+            animation: flame-inner 0.2s infinite alternate;
+        }
+
+        .chama::after {
+            height: 120%;
+            bottom: -5%;
+            background: linear-gradient(to top, 
+                rgba(255,255,255,0) 30%,
+                currentColor 80%);
+            filter: blur(8px);
+        }
+
+        [data-fase="1"] { color: #FFD700; height: 10vh; }
+        [data-fase="2"] { color: #FFA500; height: 15vh; }
+        [data-fase="3"] { color: #FF4500; height: 20vh; }
+        [data-fase="4"] { color: #4169E1; height: 25vh; }
+        [data-fase="5"] { color: #9370DB; height: 30vh; }
+
+        @keyframes flame {
+            0% { transform: translateX(-50%) scale(1); }
+            100% { transform: translateX(-50%) scale(1.05) rotate(1deg); }
+        }
+
+        @keyframes flame-inner {
+            0% { opacity: 0.8; transform: scaleY(0.95); }
+            100% { opacity: 1; transform: scaleY(1.05); }
+        }
+
+        #valorAtual {
+            font-size: 2.2rem;
+            margin: 1rem 0;
+            text-align: center;
+            text-shadow: 0 0 10px currentColor;
+        }
+
+        .controls {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+            width: 100%;
+            padding: 0 1rem;
+        }
+
+        input[type="number"] {
+            width: 100%;
+            padding: 1rem;
+            font-size: 1.2rem;
+            border: 2px solid #333;
+            border-radius: 12px;
+            background: #222;
+            color: white;
+            -webkit-appearance: none;
+        }
+
+        .buttons {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 0.8rem;
+            width: 100%;
+        }
+
+        button {
+            padding: 1.2rem;
+            font-size: 1.1rem;
+            border-radius: 12px;
+            color: white;
+            border: none;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        button:active {
+            transform: scale(0.95);
+        }
+
+        .add {
+            background: #4CAF50;
+        }
+
+        .remove {
+            background: #f44336;
+        }
+
+        .reset {
+            background: #FFA500;
+        }
+
+        .progress {
+            width: 100%;
+            height: 8px;
+            background: #333;
+            border-radius: 4px;
+            margin: 1.5rem 0;
+        }
+
+        .progress-bar {
+            height: 100%;
+            background: currentColor;
+            transition: width 0.5s ease;
+        }
+
+        @media (max-width: 600px) {
+            .chama {
+                filter: blur(3px);
+            }
+            
+            button {
+                padding: 1rem;
+                font-size: 1rem;
+            }
+            
+            #valorAtual {
+                font-size: 2rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>EconomicFire</h1>
+        <div id="valorAtual">R$ 0,00</div>
+        
+        <div class="chama-container">
+            <div class="chama" data-fase="1"></div>
+        </div>
+
+        <div class="progress">
+            <div class="progress-bar" style="width: 0%"></div>
+        </div>
+
+        <div class="controls">
+            <input type="number" id="valor" placeholder="Valor" inputmode="decimal" pattern="[0-9]*">
+            
+            <div class="buttons">
+                <button class="add" onclick="adicionarValor()">➕ Adicionar</button>
+                <button class="remove" onclick="removerValor()">➖ Remover</button>
+                <button class="reset" onclick="resetarValor()">🔄 Zerar</button>
+            </div>
+            
+            <button class="add" onclick="baixarArquivo()">💾 Salvar</button>
+            <input type="file" id="upload" hidden accept=".txt" onchange="carregarArquivo(event)">
+            <button class="add" onclick="document.getElementById('upload').click()">📂 Abrir</button>
+        </div>
+    </div>
+
+    <script>
+        let valorAtual = parseFloat(localStorage.getItem('valorGuardado')) || 0;
+        const chama = document.querySelector('.chama');
+        const progressBar = document.querySelector('.progress-bar');
+        const displayValor = document.getElementById('valorAtual');
+
+        const fases = [
+            { limite: 1000, cor: '#FFD700' },
+            { limite: 2000, cor: '#FFA500' },
+            { limite: 3000, cor: '#FF4500' },
+            { limite: 4000, cor: '#4169E1' },
+            { limite: 5000, cor: '#9370DB' }
+        ];
+
+        function atualizarInterface() {
+            const faseAtual = fases.find(f => valorAtual < f.limite) || fases[4];
+            chama.dataset.fase = fases.indexOf(faseAtual) + 1;
+            displayValor.style.color = faseAtual.cor;
+            progressBar.style.width = `${(valorAtual / 5000) * 100}%`;
+            progressBar.style.backgroundColor = faseAtual.cor;
+        }
+
+        function atualizarDisplay() {
+            displayValor.textContent = `R$ ${valorAtual.toFixed(2).replace('.', ',')}`;
+            localStorage.setItem('valorGuardado', valorAtual);
+        }
+
+        function adicionarValor() {
+            const input = document.getElementById('valor');
+            const valor = parseFloat(input.value.replace(',', '.')) || 0;
+            
+            if(valor > 0) {
+                valorAtual = Math.min(valorAtual + valor, 5000);
+                input.value = '';
+                
+                chama.style.transform = 'translateX(-50%) scale(1.1)';
+                setTimeout(() => chama.style.transform = 'translateX(-50%) scale(1)', 200);
+                
+                atualizarDisplay();
+                atualizarInterface();
+            }
+        }
+
+        function removerValor() {
+            const input = document.getElementById('valor');
+            const valor = parseFloat(input.value.replace(',', '.')) || 0;
+            
+            if(valor > 0) {
+                valorAtual = Math.max(valorAtual - valor, 0);
+                input.value = '';
+                
+                chama.style.transform = 'translateX(-50%) scale(0.9)';
+                setTimeout(() => chama.style.transform = 'translateX(-50%) scale(1)', 200);
+                
+                atualizarDisplay();
+                atualizarInterface();
+            }
+        }
+
+        function resetarValor() {
+            if(confirm('Tem certeza que quer zerar o valor?')) {
+                valorAtual = 0;
+                atualizarDisplay();
+                atualizarInterface();
+                localStorage.removeItem('valorGuardado');
+            }
+        }
+
+        function baixarArquivo() {
+            const conteudo = `ValorAtual:${valorAtual.toFixed(2)}`;
+            const blob = new Blob([conteudo], { type: 'text/plain' });
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = 'EconomicFire.txt';
+            link.click();
+            URL.revokeObjectURL(url);
+        }
+
+        function carregarArquivo(event) {
+            const file = event.target.files[0];
+            if(file) {
+                const reader = new FileReader();
+                
+                reader.onload = function(e) {
+                    try {
+                        const conteudo = e.target.result;
+                        if(!conteudo.includes('ValorAtual:')) {
+                            throw new Error('Formato de arquivo inválido');
+                        }
+                        
+                        const valorTexto = conteudo.split(':')[1].trim();
+                        const valor = parseFloat(valorTexto.replace(',', '.'));
+                        
+                        if(isNaN(valor)) {
+                            throw new Error('Valor numérico inválido');
+                        }
+                        
+                        valorAtual = Math.min(valor, 5000);
+                        atualizarDisplay();
+                        atualizarInterface();
+                        alert('Arquivo carregado com sucesso!');
+                        
+                    } catch (error) {
+                        alert(`Erro: ${error.message}`);
+                    } finally {
+                        event.target.value = '';
+                    }
+                };
+                
+                reader.onerror = function() {
+                    alert('Erro na leitura do arquivo');
+                    event.target.value = '';
+                };
+                
+                reader.readAsText(file);
+            }
+        }
+
+        document.getElementById('valor').addEventListener('focus', () => {
+            window.scrollTo(0, 0);
+            document.body.style.height = '100vh';
+        });
+
+        atualizarDisplay();
+        atualizarInterface();
+    </script>
+</body>
+</html>
