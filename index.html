@@ -50,6 +50,7 @@
             max-width: 100px;
             filter: blur(4px);
             animation: flame 0.3s infinite alternate;
+            cursor: pointer;
         }
 
         .chama::before,
@@ -77,11 +78,12 @@
             filter: blur(8px);
         }
 
-        [data-fase="1"] { color: #FFD700; height: 10vh; }
-        [data-fase="2"] { color: #FFA500; height: 15vh; }
-        [data-fase="3"] { color: #FF4500; height: 20vh; }
-        [data-fase="4"] { color: #4169E1; height: 25vh; }
-        [data-fase="5"] { color: #9370DB; height: 30vh; }
+        [data-fase="1"] { color: #FFD700; height: 5vh; }
+        [data-fase="2"] { color: #FFA500; height: 10vh; }
+        [data-fase="3"] { color: #FF4500; height: 15vh; }
+        [data-fase="4"] { color: #4169E1; height: 20vh; }
+        [data-fase="5"] { color: #9370DB; height: 25vh; }
+        [data-fase="6"] { color: #FF69B4; height: 30vh; }
 
         @keyframes flame {
             0% { transform: translateX(-50%) scale(1); }
@@ -166,16 +168,45 @@
             transition: width 0.5s ease;
         }
 
+        @keyframes gradient-shine {
+            0% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+
+        .animate-gradient {
+            animation: gradient-shine 1.5s linear infinite;
+            background-size: 200% 100%;
+        }
+
+        .emoji-easter-egg {
+            position: absolute;
+            bottom: 50%;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 2em;
+            opacity: 0;
+            pointer-events: none;
+            z-index: 1000;
+        }
+
+        @keyframes stay {
+        }
+
+        @keyframes ghost-float {
+            0% { opacity: 1; transform: translate(-50%, 0); }
+            100% { opacity: 0; transform: translate(-50%, -100vh) scale(1.5); }
+        }
+
         @media (max-width: 600px) {
             .chama {
                 filter: blur(3px);
             }
-            
+
             button {
                 padding: 1rem;
                 font-size: 1rem;
             }
-            
+
             #valorAtual {
                 font-size: 2rem;
             }
@@ -186,9 +217,10 @@
     <div class="container">
         <h1>EconomicFire</h1>
         <div id="valorAtual">R$ 0,00</div>
-        
+
         <div class="chama-container">
             <div class="chama" data-fase="1"></div>
+            <div class="emoji-easter-egg"></div>
         </div>
 
         <div class="progress">
@@ -197,13 +229,13 @@
 
         <div class="controls">
             <input type="number" id="valor" placeholder="Valor" inputmode="decimal" pattern="[0-9]*">
-            
+
             <div class="buttons">
                 <button class="add" onclick="adicionarValor()">➕ Adicionar</button>
                 <button class="remove" onclick="removerValor()">➖ Remover</button>
                 <button class="reset" onclick="resetarValor()">🔄 Zerar</button>
             </div>
-            
+
             <button class="add" onclick="baixarArquivo()">💾 Salvar</button>
             <input type="file" id="upload" hidden accept=".txt" onchange="carregarArquivo(event)">
             <button class="add" onclick="document.getElementById('upload').click()">📂 Abrir</button>
@@ -215,23 +247,127 @@
         const chama = document.querySelector('.chama');
         const progressBar = document.querySelector('.progress-bar');
         const displayValor = document.getElementById('valorAtual');
+        const emojiElement = document.querySelector('.emoji-easter-egg');
+
+        let easterEggCount = 0;
+        let emojiTimeout;
+        let sequenceTimeouts = [];
 
         const fases = [
             { limite: 1000, cor: '#FFD700' },
             { limite: 2000, cor: '#FFA500' },
             { limite: 3000, cor: '#FF4500' },
             { limite: 4000, cor: '#4169E1' },
-            { limite: 5000, cor: '#9370DB' }
+            { limite: 5000, cor: '#9370DB' },
+            { limite: 5000, cor: '#FF69B4' }
         ];
 
-        function atualizarInterface() {
-            const faseAtual = fases.find(f => valorAtual < f.limite) || fases[4];
-            chama.dataset.fase = fases.indexOf(faseAtual) + 1;
-            displayValor.style.color = faseAtual.cor;
-            progressBar.style.width = `${(valorAtual / 5000) * 100}%`;
-            progressBar.style.backgroundColor = faseAtual.cor;
+        chama.addEventListener('click', function() {
+            easterEggCount++;
+            
+            if(easterEggCount === 5) {
+                startEmojiSequence();
+            }
+            
+            clearTimeout(emojiTimeout);
+            emojiTimeout = setTimeout(() => easterEggCount = 0, 1000);
+        });
+
+        function startEmojiSequence() {
+    easterEggCount = 0;
+    clearAllTimeouts();
+
+    const pigEmoji = showEmoji('🐷', 'stay 3s');
+    sequenceTimeouts.push(setTimeout(() => {
+        hideEmoji(pigEmoji);
+    }, 3000));
+
+    sequenceTimeouts.push(setTimeout(() => {
+        const baconEmoji = showEmoji('🥓', 'stay 3s');
+        sequenceTimeouts.push(setTimeout(() => {
+            hideEmoji(baconEmoji);
+        }, 3000));
+    }, 6000));
+
+    sequenceTimeouts.push(setTimeout(() => {
+        const blackCircleEmoji = showEmoji('⚫', 'stay 3s');
+        sequenceTimeouts.push(setTimeout(() => {
+            hideEmoji(blackCircleEmoji);
+        }, 3000));
+    }, 9000));
+
+    sequenceTimeouts.push(setTimeout(() => {
+        const ghostEmoji = showEmoji('👻', 'stay 3s');
+        sequenceTimeouts.push(setTimeout(() => {
+        }, 3000));
+    }, 12000));
+}
+sequenceTimeouts.push(setTimeout(() => {
+        const ghostEmoji = showEmoji('', 'stay 3s');
+        sequenceTimeouts.push(setTimeout(() => {
+        }, 3000));
+    }, 15000));
+
+
+function showEmoji(emoji, className) {
+    const emojiElement = document.createElement('div');
+    emojiElement.textContent = emoji;
+    emojiElement.className = className;
+    document.body.appendChild(emojiElement);
+    return emojiElement;
+}
+
+function hideEmoji(emojiElement) {
+    emojiElement.remove();
+}
+
+function clearAllTimeouts() {
+    sequenceTimeouts.forEach(timeout => clearTimeout(timeout));
+    sequenceTimeouts = [];
+}
+        function showEmoji(emoji, animation) {
+            emojiElement.textContent = emoji;
+            emojiElement.style.animation = 'none';
+            void emojiElement.offsetHeight; // Força recálculo
+            emojiElement.style.opacity = '1';
+            
+            if(animation) {
+                emojiElement.style.animation = animation;
+            }
         }
 
+        function clearAllTimeouts() {
+            sequenceTimeouts.forEach(clearTimeout);
+            sequenceTimeouts = [];
+        }
+
+        function atualizarInterface() {
+            let currentFaseIndex = fases.findIndex(f => valorAtual < f.limite);
+            if (currentFaseIndex === -1) currentFaseIndex = fases.length - 1;
+            
+            const faseAtual = fases[currentFaseIndex];
+            chama.dataset.fase = currentFaseIndex + 1;
+            displayValor.style.color = faseAtual.cor;
+            progressBar.style.width = `${(valorAtual / 5000) * 100}%`;
+
+            const previousLimite = currentFaseIndex === 0 ? 0 : fases[currentFaseIndex - 1].limite;
+            const range = faseAtual.limite - previousLimite;
+            const progress = range > 0 ? (valorAtual - previousLimite) / range : 0;
+
+            if (currentFaseIndex < fases.length - 1 && progress >= 0.9) {
+                const nextFase = fases[currentFaseIndex + 1];
+                progressBar.style.background = `linear-gradient(90deg, 
+                    ${faseAtual.cor} 0%, 
+                    ${nextFase.cor} 50%, 
+                    ${faseAtual.cor} 100%)`;
+                progressBar.classList.add('animate-gradient');
+            } else {
+                progressBar.style.background = faseAtual.cor;
+                progressBar.classList.remove('animate-gradient');
+            }
+        }
+
+        
         function atualizarDisplay() {
             displayValor.textContent = `R$ ${valorAtual.toFixed(2).replace('.', ',')}`;
             localStorage.setItem('valorGuardado', valorAtual);
@@ -240,14 +376,14 @@
         function adicionarValor() {
             const input = document.getElementById('valor');
             const valor = parseFloat(input.value.replace(',', '.')) || 0;
-            
+
             if(valor > 0) {
                 valorAtual = Math.min(valorAtual + valor, 5000);
                 input.value = '';
-                
+
                 chama.style.transform = 'translateX(-50%) scale(1.1)';
                 setTimeout(() => chama.style.transform = 'translateX(-50%) scale(1)', 200);
-                
+
                 atualizarDisplay();
                 atualizarInterface();
             }
@@ -256,14 +392,14 @@
         function removerValor() {
             const input = document.getElementById('valor');
             const valor = parseFloat(input.value.replace(',', '.')) || 0;
-            
+
             if(valor > 0) {
                 valorAtual = Math.max(valorAtual - valor, 0);
                 input.value = '';
-                
+
                 chama.style.transform = 'translateX(-50%) scale(0.9)';
                 setTimeout(() => chama.style.transform = 'translateX(-50%) scale(1)', 200);
-                
+
                 atualizarDisplay();
                 atualizarInterface();
             }
@@ -293,38 +429,38 @@
             const file = event.target.files[0];
             if(file) {
                 const reader = new FileReader();
-                
+
                 reader.onload = function(e) {
                     try {
                         const conteudo = e.target.result;
                         if(!conteudo.includes('ValorAtual:')) {
                             throw new Error('Formato de arquivo inválido');
                         }
-                        
+
                         const valorTexto = conteudo.split(':')[1].trim();
                         const valor = parseFloat(valorTexto.replace(',', '.'));
-                        
+
                         if(isNaN(valor)) {
                             throw new Error('Valor numérico inválido');
                         }
-                        
+
                         valorAtual = Math.min(valor, 5000);
                         atualizarDisplay();
                         atualizarInterface();
                         alert('Arquivo carregado com sucesso!');
-                        
+
                     } catch (error) {
                         alert(`Erro: ${error.message}`);
                     } finally {
                         event.target.value = '';
                     }
                 };
-                
+
                 reader.onerror = function() {
                     alert('Erro na leitura do arquivo');
                     event.target.value = '';
                 };
-                
+
                 reader.readAsText(file);
             }
         }
